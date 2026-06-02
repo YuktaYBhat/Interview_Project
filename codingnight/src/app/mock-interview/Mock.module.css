@@ -1,0 +1,49 @@
+.pageWrapper { display: flex; flex-direction: column; height: calc(100vh - 70px - 4rem); overflow-y: auto; }
+
+.setupCard { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0; }
+.setupRow { display: flex; gap: 1.5rem; }
+.setupSection { display: flex; flex-direction: column; }
+.resumeBtn { padding: 0.4375rem 0.875rem; border-radius: var(--radius-md); font-size: 0.8125rem; font-weight: 500; background: var(--bg-muted); color: var(--text-muted); border: 1px solid var(--border-main); transition: all var(--transition-fast); white-space: nowrap; }
+.resumeBtn:hover { border-color: var(--color-primary); color: var(--text-main); }
+.resumeBtnActive { background: var(--color-primary-light); color: var(--color-primary); border-color: rgba(37, 99, 235, 0.3); font-weight: 600; }
+
+.mainContent { display: flex; gap: 1.5rem; flex: 1; min-height: 0; }
+
+.companiesCol { width: 280px; min-width: 280px; display: flex; flex-direction: column; }
+.companiesList { display: flex; flex-direction: column; gap: 0.5rem; }
+.companyCard { display: flex; align-items: center; gap: 0.75rem; background: var(--bg-card); border: 1px solid var(--border-main); border-radius: var(--radius-lg); padding: 1rem; transition: all var(--transition-fast); cursor: pointer; text-align: left; }
+.companyCard:hover:not(:disabled) { border-color: var(--brand-color, #cbd5e1); transform: translateX(2px); }
+.companyCardActive { border-left: 4px solid var(--brand-color, var(--color-primary)); background: var(--bg-muted); }
+.companyCard:disabled { opacity: 0.5; cursor: not-allowed; }
+.companyIcon { font-size: 1.5rem; }
+.companyName { font-weight: 600; font-size: 0.9375rem; color: var(--text-main); }
+
+.faqsCol { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border-main); border-radius: var(--radius-lg); padding: 1.5rem; overflow-y: auto; }
+
+.emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; min-height: 300px; }
+
+.faqsList { display: flex; flex-direction: column; gap: 1rem; }
+.faqCard { background: var(--bg-muted); border: 1px solid var(--border-main); border-radius: var(--radius-md); padding: 1.25rem; transition: all var(--transition-fast); }
+.faqCard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+.faqQuestion { font-size: 1rem; font-weight: 600; color: var(--text-main); line-height: 1.4; font-style: italic; margin-bottom: 0.75rem; }
+.faqStrategy { background: white; border: 1px dashed var(--border-main); border-radius: var(--radius-md); padding: 0.75rem 1rem; }
+
+/* Voice Simulation UI */
+.simulationContainer { display: flex; flex-direction: column; height: 100%; align-items: center; justify-content: center; position: relative; }
+.waveVisualizer { display: flex; align-items: center; justify-content: center; gap: 4px; height: 100px; margin-bottom: 2rem; }
+.waveBar { width: 6px; background: var(--color-primary); border-radius: 4px; transition: height 0.1s ease; }
+.waveBar.active { animation: soundPulse 1s infinite alternate ease-in-out; }
+.waveBar.active:nth-child(2n) { animation-delay: 0.2s; }
+.waveBar.active:nth-child(3n) { animation-delay: 0.4s; }
+
+@keyframes soundPulse {
+  0% { height: 10px; opacity: 0.5; }
+  100% { height: 80px; opacity: 1; }
+}
+
+.simHeader { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; }
+.questionCard { background: white; border: 1px solid var(--border-main); border-radius: var(--radius-lg); padding: 2rem; max-width: 600px; width: 100%; text-align: center; box-shadow: var(--shadow-md); margin-bottom: 2rem; }
+.transcriptBox { background: var(--bg-muted); border-radius: var(--radius-md); padding: 1rem; width: 100%; max-width: 600px; min-height: 100px; margin-bottom: 2rem; border: 1px solid var(--border-light); font-style: italic; color: var(--text-main); }
+.micButton { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: none; cursor: pointer; transition: all 0.3s ease; background: var(--color-primary); color: white; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); }
+.micButton.listening { background: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); animation: pulseRed 1.5s infinite cubic-bezier(0.66, 0, 0, 1); }
+@keyframes pulseRed { to { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } }

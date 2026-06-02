@@ -1,0 +1,52 @@
+.page { }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+
+.cardsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+
+.actionCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.actionCard:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+.comingSoon { opacity: 0.6; cursor: default; }
+.comingSoon:hover { transform: none; border-color: var(--border-main); box-shadow: none; }
+
+.cardIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.cardTitle { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-main); }
+.cardDesc { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.5; flex: 1; }
+.cardFooter { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light); }
+.cardArrow { font-size: 1.125rem; color: var(--color-primary); transition: transform var(--transition-fast); }
+.actionCard:hover .cardArrow { transform: translateX(3px); }
+
+.tipsSection { }
+.tipsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.tipCard { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: var(--radius-lg); padding: 1.25rem; }
+.tipNum { font-size: 1.5rem; font-weight: 800; color: var(--color-primary-light); display: block; margin-bottom: 0.5rem; }
+
+.marketWidget { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 2rem; position: relative; overflow: hidden; }
+.marketHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+.marketStats { display: flex; gap: 2rem; }
+.statBox { display: flex; flex-direction: column; }
+.chartContainer { height: 160px; width: 100%; }
