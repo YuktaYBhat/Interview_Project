@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useResumeStore } from '@/lib/store';
 import { Resume, Experience, Education, Project } from '@/types';
 import { calculateATSScore, generateResumeDocx } from '@/lib/resume-utils';
@@ -48,6 +48,9 @@ export default function ResumeBuilder() {
   const [techInput, setTechInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState('');
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -201,7 +204,37 @@ export default function ResumeBuilder() {
 
   const handleNewResume = () => {
     const nr = emptyResume();
+    setSelectedResume('');
     setCurrentResume(nr);
+  };
+
+  const handleImportResume = async (file: File) => {
+    setIsImporting(true);
+    setImportMessage('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/resume-import', { method: 'POST', body: formData });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Import failed');
+      const importedResume = {
+        ...data.data.resume,
+        id: Date.now().toString(),
+        userId: 'local',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      addResume(importedResume);
+      setSelectedResume(importedResume.id);
+      setCurrentResume(importedResume);
+      setActiveTab('personal');
+      setImportMessage(`Imported successfully. ${data.data.skills.length} skills extracted.`);
+    } catch (error) {
+      setImportMessage(error instanceof Error ? error.message : 'Could not import resume');
+    } finally {
+      setIsImporting(false);
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
   };
 
   const handleSelectResume = (id: string) => {
@@ -285,6 +318,10 @@ export default function ResumeBuilder() {
               </button>
             ))}
             <button className={styles.newResumeBtn} onClick={handleNewResume}>+ New</button>
+            <button className="btn-secondary" onClick={() => importInputRef.current?.click()} disabled={isImporting}>
+              {isImporting ? 'Importing...' : 'Import Resume'}
+            </button>
+            <input ref={importInputRef} type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleImportResume(file); }} />
           </div>
         </div>
       )}
@@ -295,6 +332,8 @@ export default function ResumeBuilder() {
           <div className="mb-6">
             <h1 className="h1">Resume Architect</h1>
             <p className="body-sm mt-1">Build a professional resume that passes ATS scanners with ease.</p>
+            <p className="caption mt-2">Start from a blank resume or import an existing PDF, DOCX, or TXT resume.</p>
+            {importMessage && <p className="body-sm mt-2 text-primary" role="status">{importMessage}</p>}
           </div>
 
           {/* Tabs */}

@@ -10,12 +10,22 @@ const TOP_COMPANIES = [
   { name: 'Meta', icon: '♾️', color: '#0668E1' },
   { name: 'Apple', icon: '🍏', color: '#555555' },
   { name: 'Netflix', icon: '🍿', color: '#e50914' },
+  { name: 'Salesforce', icon: '☁️', color: '#0d9dda' },
+  { name: 'Adobe', icon: '🅰️', color: '#fa0f00' },
+  { name: 'IBM', icon: '🔷', color: '#1261a0' },
+  { name: 'Oracle', icon: '🔴', color: '#c74634' },
+  { name: 'Uber', icon: '🚗', color: '#111111' },
+  { name: 'Airbnb', icon: '🏠', color: '#ff385c' },
+  { name: 'Spotify', icon: '🎵', color: '#1db954' },
+  { name: 'Flipkart', icon: '🛒', color: '#2874f0' },
 ];
 
 export default function MockInterview() {
   const { resumes, selectedResumeId, setSelectedResume } = useResumeStore();
   const [mounted, setMounted] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
+  const [interviewMode, setInterviewMode] = useState<'jd' | 'company'>('company');
+  const [companySearch, setCompanySearch] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [faqs, setFaqs] = useState<any[]>([]);
@@ -26,6 +36,9 @@ export default function MockInterview() {
   const [isListening, setIsListening] = useState(false);
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [answers, setAnswers] = useState<Array<{ question: string; answer: string }>>([]);
+  const [results, setResults] = useState<any>(null);
+  const [isScoring, setIsScoring] = useState(false);
   
   const recognitionRef = useRef<any>(null);
 
@@ -66,19 +79,23 @@ export default function MockInterview() {
     setSelectedResume(id);
     setFaqs([]);
     setSimulationMode(false);
+    setResults(null);
   };
 
   const currentResume = resumes.find((r: any) => r.id === selectedResumeId);
 
-  const fetchFaqs = async (companyName: string) => {
-    if (!currentResume) return;
-    
-    setSelectedCompany(companyName);
+  const requestQuestions = async (mode: 'jd' | 'company', companyName = selectedCompany || 'Target role') => {
+    if (!currentResume || (mode === 'jd' && !jobDescription.trim())) return;
+    setInterviewMode(mode);
+    setSelectedCompany(mode === 'jd' ? 'Target JD' : companyName);
     setIsGenerating(true);
     setFaqs([]);
     setSimulationMode(false);
+    setResults(null);
 
     try {
+      const historyKey = `mock-interview-history:${currentResume.id}:${mode}:${companyName}:${mode === 'jd' ? jobDescription.trim().slice(0, 80) : ''}`;
+      const previousQuestions = JSON.parse(localStorage.getItem(historyKey) || '[]') as string[];
       const res = await fetch('/api/company-faqs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,19 +103,22 @@ export default function MockInterview() {
           resumeId: currentResume.id,
           resume: currentResume,
           jobDescription,
-          company: companyName
+          company: mode === 'jd' ? 'Target role' : companyName,
+          mode,
+          excludeQuestions: previousQuestions,
         }),
       });
       const data = await res.json();
       if (data.success && data.data?.faqs) {
         setFaqs(data.data.faqs);
+        const newQuestions = data.data.faqs.map((faq: any) => faq.question).filter(Boolean);
+        localStorage.setItem(historyKey, JSON.stringify([...previousQuestions, ...newQuestions].slice(-50)));
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsGenerating(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setIsGenerating(false); }
   };
+
+  const fetchFaqs = async (companyName: string) => requestQuestions('company', companyName);
 
   const speak = (text: string, callback?: () => void) => {
       if (!('speechSynthesis' in window)) {
@@ -125,6 +145,8 @@ export default function MockInterview() {
       setSimulationMode(true);
       setCurrentFaqIndex(0);
       setTranscript('');
+      setAnswers([]);
+      setResults(null);
       
       if (faqs.length > 0) {
           // Add a tiny delay for UI to transition
@@ -148,9 +170,29 @@ export default function MockInterview() {
       }
   };
 
-  const nextQuestion = () => {
+    const finishInterview = async (finalAnswers: Array<{ question: string; answer: string }>) => {
+      setIsScoring(true);
+      try {
+        const response = await fetch('/api/mock-feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company: selectedCompany, mode: interviewMode, jobDescription, resume: currentResume, answers: finalAnswers }),
+        });
+        const data = await response.json();
+        if (data.success) setResults(data.data);
+      } catch (error) {
+        console.error('Mock interview scoring error:', error);
+      } finally {
+        setIsScoring(false);
+        setSimulationMode(false);
+      }
+    };
+
+    const nextQuestion = () => {
       if (isListening) toggleListening();
       window.speechSynthesis.cancel();
+      const updatedAnswers = [...answers, { question: faqs[currentFaqIndex]?.question || '', answer: transcript.trim() }];
+      setAnswers(updatedAnswers);
       
       if (currentFaqIndex < faqs.length - 1) {
           const nextIdx = currentFaqIndex + 1;
@@ -160,7 +202,7 @@ export default function MockInterview() {
           speak(`Great. Next question: ${faqs[nextIdx].question}`);
       } else {
           speak("That concludes our interview. Thank you for your time.");
-          setTimeout(() => setSimulationMode(false), 4000);
+          void finishInterview(updatedAnswers);
       }
   };
 
@@ -169,6 +211,7 @@ export default function MockInterview() {
       window.speechSynthesis.cancel();
       if (isListening) recognitionRef.current?.stop();
       setIsListening(false);
+        setAnswers([]);
   };
 
   if (!mounted) return null;
@@ -212,6 +255,26 @@ export default function MockInterview() {
                 />
             </div>
             </div>
+            <div className="flex gap-2 mt-4 flex-wrap">
+              <button className="btn-primary" onClick={() => void requestQuestions('jd')} disabled={!selectedResumeId || !jobDescription.trim() || isGenerating}>
+                {isGenerating && interviewMode === 'jd' ? 'Preparing JD Interview...' : '🎯 Mock on JD'}
+              </button>
+              <span className="caption" style={{ alignSelf: 'center' }}>Uses your resume, this JD, technical questions, and behavioral questions.</span>
+            </div>
+        </div>
+      )}
+
+      {results && !simulationMode && (
+        <div className={styles.resultCard}>
+          <div className="flex justify-between items-center mb-4">
+            <div><span className="overline">INTERVIEW RESULTS</span><h2 className="h2 mt-1">{selectedCompany} readiness report</h2></div>
+            <div className={styles.resultScore}>{results.score}<span>/100</span></div>
+          </div>
+          <div className="flex gap-6 flex-wrap">
+            <div><strong>Strengths</strong>{results.strengths?.map((item: string, index: number) => <p className="body-sm mt-1" key={index}>✓ {item}</p>)}</div>
+            <div><strong>Improve next</strong>{results.improvements?.map((item: string, index: number) => <p className="body-sm mt-1" key={index}>! {item}</p>)}</div>
+          </div>
+          {isScoring && <p className="caption mt-3">Analyzing your answers...</p>}
         </div>
       )}
 
@@ -219,8 +282,14 @@ export default function MockInterview() {
         {!simulationMode && (
             <div className={styles.companiesCol}>
             <span className="overline mb-3">TOP COMPANIES</span>
+            <input
+              className="input-field mb-3"
+              placeholder="Search any company..."
+              value={companySearch}
+              onChange={(event) => setCompanySearch(event.target.value)}
+            />
             <div className={styles.companiesList}>
-                {TOP_COMPANIES.map((company) => (
+                {TOP_COMPANIES.filter((company) => company.name.toLowerCase().includes(companySearch.toLowerCase().trim())).map((company) => (
                 <button
                     key={company.name}
                     className={`${styles.companyCard} ${selectedCompany === company.name ? styles.companyCardActive : ''}`}
@@ -233,6 +302,11 @@ export default function MockInterview() {
                 </button>
                 ))}
             </div>
+            {companySearch.trim() && !TOP_COMPANIES.some((company) => company.name.toLowerCase() === companySearch.trim().toLowerCase()) && (
+              <button className="btn-secondary mt-3" onClick={() => void fetchFaqs(companySearch.trim())} disabled={!selectedResumeId || isGenerating}>
+                Search {companySearch.trim()} interview questions
+              </button>
+            )}
             {!selectedResumeId && (
                 <p className="caption mt-3 text-warning">Please select a resume first.</p>
             )}

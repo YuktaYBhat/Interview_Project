@@ -93,6 +93,9 @@ export interface StudyPlan {
   jobDescription: string;
   gaps: Skill[];
   modules: StudyModule[];
+  coverage?: number;
+  matchedSkills?: Skill[];
+  missingSkills?: Skill[];
   createdAt: Date;
 }
 

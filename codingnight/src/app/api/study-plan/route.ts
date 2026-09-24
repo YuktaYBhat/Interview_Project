@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StudyPlan, Skill, StudyModule, StudyResource } from '@/types';
+import { analyzeResumeAgainstJob } from '@/lib/resume-analysis';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Analyze gaps
-    const gaps = analyzeSkillGaps(resume, jobDescription);
+    const analysis = analyzeResumeAgainstJob(resume, jobDescription);
+    const gaps = analysis.skills.filter((skill) => skill.gap > 0);
 
     // Generate study plan
     const modules = generateStudyModules(gaps, jobDescription);
@@ -25,6 +27,9 @@ export async function POST(request: NextRequest) {
       jobDescription,
       gaps,
       modules,
+      coverage: analysis.coverage,
+      matchedSkills: analysis.matchedSkills,
+      missingSkills: analysis.missingSkills,
       createdAt: new Date(),
     };
 

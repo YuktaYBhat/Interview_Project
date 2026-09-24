@@ -14,6 +14,10 @@ export default function StudyPath() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  useEffect(() => {
+    setCurrentPlan(null);
+  }, [jobDescription, setCurrentPlan]);
+
   const handleResumeSelect = (id: string) => {
     setSelectedResume(id);
     setCurrentPlan(null);
@@ -41,11 +45,9 @@ export default function StudyPath() {
 
   if (!mounted) return null;
 
-  const plan = currentPlan;
+  const plan = jobDescription.trim() ? currentPlan : null;
   const activeModule = plan?.modules?.[activeModuleIdx];
-  const totalGap = plan?.gaps?.reduce((s: number, g: any) => s + g.gap, 0) || 0;
-  const maxGap = (plan?.gaps?.length || 1) * 3;
-  const masteryPct = Math.round(((maxGap - totalGap) / maxGap) * 100);
+  const masteryPct = plan?.coverage ?? 0;
 
   const renderHeatmapJD = () => {
       if (!jobDescription) return null;
@@ -136,6 +138,10 @@ export default function StudyPath() {
             </div>
             <div className={styles.progressTrack}>
               <div className={styles.progressFill} style={{ width: `${Math.min(100, Math.max(0, masteryPct))}%` }} />
+            </div>
+            <div className="flex justify-between mt-2">
+              <span className="caption">{plan.matchedSkills?.length || 0} skills matched</span>
+              <span className="caption">{plan.missingSkills?.length || 0} skills to improve</span>
             </div>
           </div>
 

@@ -4,7 +4,7 @@ import { callGemini, parseGeminiJSON } from '@/lib/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    const { resumeId, resume } = await request.json();
+    const { resumeId, resume, jobDescription } = await request.json();
 
     if (!resume) {
       return NextResponse.json(
@@ -15,10 +15,13 @@ export async function POST(request: NextRequest) {
 
     // Try Gemini first
     const resumeSummary = buildResumeSummary(resume);
-    const prompt = `You are an expert interview coach. Generate 7-9 tailored interview questions based on this resume.
+    const prompt = `You are an expert interview coach. Generate 7-9 varied, role-specific interview questions based on this resume and target job description.
 
 Resume:
 ${resumeSummary}
+
+Target job description:
+${jobDescription || 'No job description provided. Infer the likely role from the resume.'}
 
 Generate a mix of behavioral, technical, leadership, and situational questions. Each question should directly reference specific details from the resume.
 
@@ -48,7 +51,7 @@ Make questions specific to this person's actual experience, not generic.`;
     }
 
     // Fallback: generate heuristic questions
-    const questions = generateQuestionsFromResume(resume);
+    const questions = generateQuestionsFromResume(resume, jobDescription || '');
     return NextResponse.json({
       success: true,
       data: { resumeId, questions, generatedAt: new Date() },
@@ -89,9 +92,12 @@ function buildResumeSummary(resume: any): string {
   return text;
 }
 
-function generateQuestionsFromResume(resume: any): Question[] {
+function generateQuestionsFromResume(resume: any, jobDescription: string): Question[] {
   const questions: Question[] = [];
   const { experience, skills, projects } = resume.content;
+  const role = jobDescription.match(/(?:role|position|job title)\s*[:\-]?\s*([^\n,.]+)/i)?.[1]?.trim()
+    || experience?.[0]?.jobTitle || 'this role';
+  const requestedSkills = skills?.filter((skill: string) => jobDescription.toLowerCase().includes(skill.toLowerCase())).slice(0, 3) || [];
 
   if (experience?.length > 0) {
     questions.push({
@@ -172,7 +178,7 @@ function generateQuestionsFromResume(resume: any): Question[] {
     id: `q_${Date.now()}_8`,
     category: 'situational',
     priority: 'medium',
-    text: 'If you discovered a critical bug in production right before a major release, how would you handle it?',
+    text: `For the ${role} role, how would you prioritize a critical production issue while still meeting the requirements in this job description?`,
     suggestedLength: '2 minutes',
     resumeContext: 'Problem-solving approach',
   });
@@ -181,7 +187,9 @@ function generateQuestionsFromResume(resume: any): Question[] {
     id: `q_${Date.now()}_9`,
     category: 'situational',
     priority: 'medium',
-    text: 'How do you stay current with new technologies and industry trends in your field?',
+    text: requestedSkills.length
+      ? `How would you apply ${requestedSkills.join(', ')} to solve a problem in this ${role} role?`
+      : `Which responsibility in this ${role} job description would require the most preparation from you, and how would you approach it?`,
     suggestedLength: '1-2 minutes',
     resumeContext: 'Continuous learning',
   });

@@ -15,6 +15,7 @@ export default function QAGenerator() {
   const [feedback, setFeedback] = useState<any>(null);
   const [timer, setTimer] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  const [jobDescription, setJobDescription] = useState('');
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -51,7 +52,7 @@ export default function QAGenerator() {
       const res = await fetch('/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId: resume.id, resume }),
+        body: JSON.stringify({ resumeId: resume.id, resume, jobDescription }),
       });
       const data = await res.json();
       if (data.success && data.data?.questions) {
@@ -130,6 +131,13 @@ export default function QAGenerator() {
             ))
           )}
         </div>
+        <textarea
+          className="textarea-field"
+          rows={4}
+          placeholder="Paste the target job description so questions match the role and required skills..."
+          value={jobDescription}
+          onChange={(event) => setJobDescription(event.target.value)}
+        />
         {selectedResumeId && (
           <button className="btn-primary mt-3" onClick={handleGenerateQuestions} disabled={isGenerating}>
             {isGenerating ? (<><span className="spinner" style={{ width: 14, height: 14 }}></span> Generating...</>) : '🎯 Generate Interview Questions'}
