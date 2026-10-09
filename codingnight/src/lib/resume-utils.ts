@@ -113,7 +113,7 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Bord
 
 // Generate ATS-friendly DOCX
 export async function generateResumeDocx(resume: Resume): Promise<Blob> {
-  const { personalInfo, experience, education, skills, projects } = resume.content;
+  const { personalInfo, experience, education, skills, projects, certifications = [], achievements = [] } = resume.content;
 
   const children: any[] = [];
 
@@ -128,7 +128,7 @@ export async function generateResumeDocx(resume: Resume): Promise<Blob> {
     );
   }
 
-  const contactText = [personalInfo.email, personalInfo.phone, personalInfo.location].filter(Boolean).join(' | ');
+  const contactText = [personalInfo.email, personalInfo.phone, personalInfo.location, personalInfo.linkedin, personalInfo.github].filter(Boolean).join(' | ');
   if (contactText) {
     children.push(
       new Paragraph({
@@ -229,6 +229,7 @@ export async function generateResumeDocx(resume: Resume): Promise<Blob> {
         children: [new TextRun({ text: `${edu.degree || ''} ${edu.field ? 'in ' + edu.field : ''}`, size: 22 })],
         spacing: { after: 100 },
       }));
+        if (edu.gpa) children.push(new Paragraph({ children: [new TextRun({ text: `GPA: ${edu.gpa}`, size: 20 })], spacing: { after: 100 } }));
     });
   }
 
@@ -239,6 +240,16 @@ export async function generateResumeDocx(resume: Resume): Promise<Blob> {
       children: [new TextRun({ text: skills.join(' • '), size: 22 })],
       spacing: { before: 100, after: 200 }
     }));
+  }
+
+  if (certifications.length > 0) {
+    children.push(createSectionHeader('CERTIFICATIONS'));
+    certifications.forEach((certification) => children.push(new Paragraph({ children: [new TextRun({ text: certification, size: 22 })], bullet: { level: 0 }, spacing: { after: 50 } })));
+  }
+
+  if (achievements.length > 0) {
+    children.push(createSectionHeader('ACHIEVEMENTS'));
+    achievements.forEach((achievement) => children.push(new Paragraph({ children: [new TextRun({ text: achievement, size: 22 })], bullet: { level: 0 }, spacing: { after: 50 } })));
   }
 
   const doc = new Document({

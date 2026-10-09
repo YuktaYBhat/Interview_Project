@@ -3,13 +3,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useResumeStore } from '@/lib/store';
 import { Resume, Experience, Education, Project } from '@/types';
 import { calculateATSScore, generateResumeDocx } from '@/lib/resume-utils';
+import LivePreview from '@/components/resume-builder/LivePreview';
+import ProjectsTab from '@/components/resume-builder/ProjectsTab';
 import styles from './Resume.module.css';
 
 const emptyResume = (): Partial<Resume> => ({
   id: '',
   title: 'Untitled Resume',
   content: {
-    personalInfo: { fullName: '', email: '', phone: '', location: '', summary: '' },
+    personalInfo: { fullName: '', email: '', phone: '', location: '', summary: '', linkedin: '', github: '' },
     experience: [],
     education: [],
     skills: [],
@@ -80,6 +82,12 @@ export default function ResumeBuilder() {
   }, [currentResume]);
 
   useEffect(() => { recalcATS(); }, [currentResume, recalcATS]);
+
+  const getResumeSnapshot = (): Resume => {
+    const fallback = emptyResume().content!;
+    const content = currentResume.content || fallback;
+    return { ...currentResume, content: { ...fallback, ...content, personalInfo: { ...fallback.personalInfo, ...content.personalInfo }, experience: content.experience || [], education: content.education || [], skills: content.skills || [], projects: content.projects || [], certifications: content.certifications || [], achievements: content.achievements || [] } } as Resume;
+  };
 
   const updateField = (section: string, field: string, value: any) => {
     setCurrentResume((prev: any) => ({
@@ -190,14 +198,13 @@ export default function ResumeBuilder() {
 
   const handleSave = () => {
     setIsSaving(true);
-    const title = currentResume.content?.personalInfo?.fullName
-      ? `${currentResume.content.personalInfo.fullName}'s Resume`
-      : currentResume.title || 'Untitled Resume';
+    const snapshot = getResumeSnapshot();
+    const title = snapshot.content.personalInfo.fullName ? `${snapshot.content.personalInfo.fullName}'s Resume` : snapshot.title || 'Untitled Resume';
     
-    if (currentResume.id && resumes.find((r: any) => r.id === currentResume.id)) {
-      updateResume(currentResume.id, { ...currentResume, title, updatedAt: new Date() });
+    if (snapshot.id && resumes.find((r: any) => r.id === snapshot.id)) {
+      updateResume(snapshot.id, { ...snapshot, title, updatedAt: new Date() });
     } else {
-      addResume({ ...currentResume, title, userId: 'local', createdAt: new Date(), updatedAt: new Date() });
+      addResume({ ...snapshot, title, userId: 'local', createdAt: new Date(), updatedAt: new Date() });
     }
     setTimeout(() => setIsSaving(false), 500);
   };
@@ -274,7 +281,8 @@ export default function ResumeBuilder() {
 
   const handleDownloadDocx = async () => {
     try {
-      const blob = await generateResumeDocx(currentResume as Resume);
+      const snapshot = getResumeSnapshot();
+      const blob = await generateResumeDocx(snapshot);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -286,8 +294,13 @@ export default function ResumeBuilder() {
     }
   };
 
-  const content = currentResume.content;
-  if (!content) return null;
+  const rawContent = (currentResume.content || emptyResume().content) as Resume['content'];
+  const content = {
+    ...rawContent,
+    personalInfo: { ...emptyResume().content!.personalInfo, ...rawContent.personalInfo },
+    experience: rawContent.experience || [], education: rawContent.education || [], skills: rawContent.skills || [], projects: rawContent.projects || [],
+    certifications: rawContent.certifications || [], achievements: rawContent.achievements || [],
+  } as Resume['content'];
 
   const tabs: { key: TabKey; label: string; icon: string }[] = [
     { key: 'personal', label: 'Personal', icon: '👤' },
@@ -364,6 +377,10 @@ export default function ResumeBuilder() {
                   </div>
                 </div>
                 <div className={styles.formRow}>
+                  <div className={styles.formGroup}><label className="form-label">LinkedIn</label><input className="input-field" placeholder="linkedin.com/in/username" value={content.personalInfo.linkedin || ''} onChange={(e) => updateField('personalInfo', 'linkedin', e.target.value)}/></div>
+                  <div className={styles.formGroup}><label className="form-label">GitHub</label><input className="input-field" placeholder="github.com/username" value={content.personalInfo.github || ''} onChange={(e) => updateField('personalInfo', 'github', e.target.value)}/></div>
+                </div>
+                <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label className="form-label">Phone</label>
                     <input className="input-field" placeholder="+1 555-0123" value={content.personalInfo.phone || ''} onChange={(e) => updateField('personalInfo', 'phone', e.target.value)}/>
@@ -427,6 +444,7 @@ export default function ResumeBuilder() {
                     <div className={styles.formRow}>
                       <div className={styles.formGroup}><label className="form-label">Institution</label><input className="input-field" placeholder="MIT" value={edu.institution} onChange={(e) => updateEducation(idx, 'institution', e.target.value)}/></div>
                       <div className={styles.formGroup}><label className="form-label">Graduation Date</label><input className="input-field" placeholder="May 2020" value={edu.graduationDate} onChange={(e) => updateEducation(idx, 'graduationDate', e.target.value)}/></div>
+                      <div className={styles.formGroup}><label className="form-label">GPA / Grade</label><input className="input-field" placeholder="3.8 / 4.0" value={edu.gpa || ''} onChange={(e) => updateEducation(idx, 'gpa', e.target.value)}/></div>
                     </div>
                   </div>
                 ))}
@@ -452,39 +470,7 @@ export default function ResumeBuilder() {
               </div>
             )}
 
-            {activeTab === 'projects' && (
-              <div className="animate-in">
-                {content.projects.map((proj: Project, idx: number) => (
-                  <div key={proj.id || idx} className={styles.entryCard}>
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="font-semibold">Project {idx + 1}</span>
-                      <button className="btn-ghost text-error" onClick={() => removeProject(idx)}>🗑️ Remove</button>
-                    </div>
-                    <div className={styles.formRow}>
-                      <div className={styles.formGroup}><label className="form-label">Title</label><input className="input-field" placeholder="Project Name" value={proj.title} onChange={(e) => updateProject(idx, 'title', e.target.value)}/></div>
-                      <div className={styles.formGroup}><label className="form-label">Link</label><input className="input-field" placeholder="https://..." value={proj.link || ''} onChange={(e) => updateProject(idx, 'link', e.target.value)}/></div>
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className="form-label">Description</label>
-                      <textarea className="textarea-field" rows={3} placeholder="Describe the project..." value={proj.description} onChange={(e) => updateProject(idx, 'description', e.target.value)}/>
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className="form-label">Technologies</label>
-                      <div className="flex gap-2 mb-2">
-                        <input className="input-field" placeholder="Add technology..." value={techInput} onChange={(e) => setTechInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addProjectTech(idx)}/>
-                        <button className="btn-secondary" onClick={() => addProjectTech(idx)}>Add</button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {proj.technologies.map((t: string, ti: number) => (
-                          <span key={ti} className={styles.skillPill}>{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <button className="btn-secondary w-full" onClick={addProject}>+ Add Project</button>
-              </div>
-            )}
+            {activeTab === 'projects' && <ProjectsTab projects={content.projects} techInput={techInput} onTechInputChange={setTechInput} onUpdate={updateProject} onAdd={addProject} onRemove={removeProject} onAddTechnology={addProjectTech} />}
           </div>
 
           {/* Actions */}
@@ -535,6 +521,11 @@ export default function ResumeBuilder() {
               </button>
             </div>
             {showPreview && (
+              <div className={styles.previewFrame}>
+                <LivePreview resumeData={content} />
+              </div>
+            )}
+            {false && content && (
               <div className={styles.previewFrame}>
                 {content.personalInfo.fullName ? (
                   <div className={styles.previewContent}>

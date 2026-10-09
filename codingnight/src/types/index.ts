@@ -23,6 +23,8 @@ export interface Resume {
     education: Education[];
     skills: string[];
     projects: Project[];
+    certifications?: string[];
+    achievements?: string[];
   };
   atsScore?: number;
   createdAt: Date;
@@ -35,6 +37,8 @@ export interface PersonalInfo {
   phone?: string;
   location?: string;
   summary?: string;
+  linkedin?: string;
+  github?: string;
 }
 
 export interface Experience {

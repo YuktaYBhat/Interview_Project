@@ -96,17 +96,12 @@ export default function MockInterview() {
     try {
       const historyKey = `mock-interview-history:${currentResume.id}:${mode}:${companyName}:${mode === 'jd' ? jobDescription.trim().slice(0, 80) : ''}`;
       const previousQuestions = JSON.parse(localStorage.getItem(historyKey) || '[]') as string[];
-      const res = await fetch('/api/company-faqs', {
+      const res = await fetch(mode === 'company' ? '/api/mock-interview/dynamic-company' : '/api/company-faqs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          resumeId: currentResume.id,
-          resume: currentResume,
-          jobDescription,
-          company: mode === 'jd' ? 'Target role' : companyName,
-          mode,
-          excludeQuestions: previousQuestions,
-        }),
+        body: mode === 'company'
+          ? JSON.stringify({ targetCompany: companyName, jobDescriptionText: jobDescription, resumeText: JSON.stringify(currentResume.content) })
+          : JSON.stringify({ resumeId: currentResume.id, resume: currentResume, jobDescription, company: 'Target role', mode, excludeQuestions: previousQuestions }),
       });
       const data = await res.json();
       if (data.success && data.data?.faqs) {

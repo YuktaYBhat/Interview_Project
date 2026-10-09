@@ -49,15 +49,19 @@ export default function QAGenerator() {
     setFeedback(null);
     setDraft('');
     try {
-      const res = await fetch('/api/questions', {
+      const historyKey = `practice-qa-history:${resume.id}:${jobDescription.trim().slice(0, 100)}`;
+      const previousQuestions = JSON.parse(localStorage.getItem(historyKey) || '[]') as string[];
+      const res = await fetch('/api/generate-practice-qa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId: resume.id, resume, jobDescription }),
+        body: JSON.stringify({ action: 'GENERATE_QUESTIONS', resumeText: JSON.stringify(resume.content), jobDescription, companyName: 'Target role', previousQuestions, randomSeed: Date.now() }),
       });
       const data = await res.json();
       if (data.success && data.data?.questions) {
-        setQuestions(data.data.questions);
-        setSelectedQ(data.data.questions[0] || null);
+        const generated = data.data.questions.map((question: any, index: number) => ({ id: question.id || `q_${Date.now()}_${index}`, category: mapCategory(question.category), priority: 'medium', text: question.question, suggestedLength: '2-3 minutes', resumeContext: question.keyFocus }));
+        setQuestions(generated);
+        localStorage.setItem(historyKey, JSON.stringify([...previousQuestions, ...generated.map((question: Question) => question.text)].slice(-50)));
+        setSelectedQ(generated[0] || null);
       }
     } catch (e) { console.error(e); }
     finally { setIsGenerating(false); }
@@ -80,13 +84,13 @@ export default function QAGenerator() {
     setIsScoring(true);
     setTimerActive(false);
     try {
-      const res = await fetch('/api/qa-feedback', {
+      const res = await fetch('/api/generate-practice-qa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ draft, question: selectedQ.text, resumeContext: selectedQ.resumeContext }),
+        body: JSON.stringify({ action: 'EVALUATE_RESPONSE', questionText: selectedQ.text, userDraftAnswer: draft }),
       });
       const data = await res.json();
-      setFeedback(data);
+      setFeedback(data.is_valid === false ? { score: 0, positives: [], improvements: [data.feedback] } : { score: Number.parseInt(String(data.relevance_score || '0'), 10) * 10, positives: [data.feedback], improvements: [data.improved_sample_answer], starBreakdown: data.star_breakdown });
     } catch (e) { console.error(e); }
     finally { setIsScoring(false); }
   };
@@ -255,4 +259,11 @@ export default function QAGenerator() {
       )}
     </div>
   );
+}
+
+function mapCategory(category: string): Question['category'] {
+  if (/behavior|star/i.test(category)) return 'behavioral';
+  if (/leadership/i.test(category)) return 'leadership';
+  if (/scenario|problem/i.test(category)) return 'situational';
+  return 'technical';
 }

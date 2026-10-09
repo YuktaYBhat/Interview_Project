@@ -40,9 +40,9 @@ export const useResumeStore = create<ResumeStore>()(
     (set, get) => ({
       resumes: [],
       selectedResumeId: null,
-      addResume: (resume: any) => 
+      addResume: (resume: any) =>
         set((state) => ({
-          resumes: [...state.resumes, { ...resume, id: Date.now().toString() }],
+          resumes: [...state.resumes, { ...resume, id: resume.id || Date.now().toString() }],
         })),
       updateResume: (id: string, updatedResume: any) =>
         set((state) => ({
